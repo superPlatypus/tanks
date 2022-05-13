@@ -45,15 +45,15 @@ public class DrawThread extends Thread {
     @Override
     public void run() {
         tank.speed = 5;
-        tank2.speed = 8;
+        tank2.speed = 6;
         while (running) {
             Canvas canvas = surfaceHolder.lockCanvas();
             if (canvas != null) {
                 try {
                     canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), paint);
                     tank.update(canvas);
-                    tank.draw(canvas);
                     tank2.update(canvas);
+                    tank.draw(canvas);
                     tank2.draw(canvas);
                     
                 } finally {

@@ -3,10 +3,12 @@ package com.example.practice;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.pm.ActivityInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.zerokol.views.joystickView.JoystickView;
 
@@ -15,9 +17,11 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.Objects;
 
-public class SecondActivity extends AppCompatActivity {
+public class SecondActivity extends MainActivity{
 //    private TextView angleTextView;
 //    private TextView powerTextView;
+    //private int angle;
+    //private int power;
     private JoystickView joystick;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,49 +36,60 @@ public class SecondActivity extends AppCompatActivity {
         GameSurfaceView gameSurfaceView = new GameSurfaceView(this);
         ll.addView(gameSurfaceView);
 
-        try {DatagramSocket datagramSocket = new DatagramSocket(6758);
-
-        byte buf[] = new byte[2048];
-        byte toSend[] = new byte[3];
-        toSend[0] = (byte) 5.1;
-        toSend[1] = 10;
-        toSend[2] = 15;
-        DatagramPacket packet = new DatagramPacket(buf, buf.length);
-        DatagramPacket send =  new DatagramPacket(toSend, toSend.length);
-        System.out.println("listening..");
-        while (true) {
-            datagramSocket.receive(packet);
-            System.out.println("recieved..");
-            System.out.println("ip:" + packet.getAddress());
-            System.out.println("port:" + packet.getPort());
-            System.out.println(new String(packet.getData(), packet.getOffset(), packet.getLength()));
-            //packet.setLength(4);
-            send.setAddress(packet.getAddress());
-            send.setPort(packet.getPort());
-            datagramSocket.send(send);
-        }}
-        catch (Exception e) {
-            e.printStackTrace();
-        }
 
 
         joystick = (JoystickView) findViewById(R.id.joystickView);
+        //SendTask sendTask = new SendTask();
 
         joystick.setOnJoystickMoveListener(new JoystickView.OnJoystickMoveListener() {
 
             @Override
             public void onValueChanged(int angle, int power, int direction) {
                 gameSurfaceView.setAngAndPowerInThread(angle,power, angle, power);
-
+                //angle = angle1;
+                //power = power1;
+                new SendTask().execute(angle, power);
             }
         }, 10);
 
 
     }
 
+    class SendTask extends AsyncTask<Integer, Void, Void> {
 
-//    Bitmap tank = BitmapFactory.decodeResource(getResources(), R.drawable.tank1);
-//    int xx = canvas.getWidth(), yy = canvas.getHeight();
-//    canvas.drawBitmap(image, xx - image.getWidth(), yy - image.getHeight(), paint);
+        @Override
+        protected Void doInBackground(Integer... params) {
+            TextView status = (TextView) findViewById(R.id.status);
+            try {
+                try {
+//                    clientSocket = new Socket("192.168.1.16", 4004); // этой строкой мы запрашиваем
+//                    reader = new BufferedReader(new InputStreamReader(System.in));
+//                    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+//                    out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+//                    status.setText("Ready!");
+                    //while (true) {
+
+                    //String word = reader.readLine();
+                    MainActivity.out.write(params[0] + " " + params[1] + "\n");
+                    MainActivity.out.flush();
+                    String serverWord = in.readLine();
+                    //status.setText(serverWord);
+                    //}
+                }
+                finally { // в любом случае необходимо закрыть сокет и потоки
+//                    status.setText("Клиент был закрыт...");
+//                    clientSocket.close();
+//                    in.close();
+//                    out.close();
+                }
+            } catch (IOException e) {
+                System.err.println(e);
+            }
+
+            return null;
+
+        }
+
+    }
 
 }

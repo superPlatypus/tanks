@@ -4,15 +4,24 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.Editable;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.zerokol.views.joystickView.JoystickView;
 import com.zerokol.views.joystickView.JoystickView.OnJoystickMoveListener;
 
+import org.w3c.dom.Text;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -20,13 +29,25 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+
+import javax.xml.transform.sax.SAXResult;
+
+
 
 
 public class MainActivity extends AppCompatActivity {
-    public int config;
-    public DatagramPacket datagramPacket;
-    public DatagramSocket datagramSocket;
+
+    protected static Socket clientSocket; //сокет для общения
+    private static BufferedReader reader; // нам нужен ридер читающий с консоли, иначе как
+    // мы узнаем что хочет сказать клиент?
+    public static BufferedReader in; // поток чтения из сокета
+    public static BufferedWriter out; // поток записи в сокет
+    public static String word;
+    private static WorkWithNetwork workWithNetwork;
+    private static TextView status;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,61 +64,97 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        TextView status = (TextView)findViewById(R.id.status);
+        EditText input = (EditText) findViewById(R.id.input);
+        //TextView status = (TextView)findViewById(R.id.status);
+        //String in = input.getText().toString();
+        Button sendButton = (Button) findViewById(R.id.sendButton);
 
-        byte buf[] = new byte[2048];
-        byte toSend[] = new byte[3];
-        toSend[0] = 5;
-        toSend[1] = 10;
-        toSend[2] = 15;
-        DatagramPacket packet = new DatagramPacket(buf, buf.length);
-
-        DatagramPacket send =  new DatagramPacket(toSend, toSend.length);
-        try {
-            InetAddress ia = InetAddress.getLocalHost();
-            send.setAddress(ia);
-            send.setPort(1199);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            datagramSocket = new DatagramSocket(1199);
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-
-        Button listenButton = (Button)findViewById(R.id.listenButton);
-        listenButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    datagramSocket.receive(datagramPacket);
-                    status.setText(new String(packet.getData(), packet.getOffset(), packet.getLength()));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            };
-        });
-
-
-        Button connectButton = (Button)findViewById(R.id.connectButton);
+        //WorkWithNetwork workWithNetwork = new WorkWithNetwork(status);
+        Button connectButton = (Button) findViewById(R.id.connectButton);
         connectButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                try {
-                    datagramSocket.send(send);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
+            public void onClick(View view) {
+               // workWithNetwork.run();
+                new ConnectTask().execute();
             }
         });
 
 
-
-
+        sendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                word = input.getText().toString();
+                new SendTask().execute();
+            }
+        });
 
 
     }
+
+class ConnectTask extends AsyncTask<Void, Void, Void> {
+
+    @Override
+        protected Void doInBackground(Void... params) {
+            TextView status = (TextView) findViewById(R.id.status);
+            try {
+                    clientSocket = new Socket("172.20.10.3", 4004); // этой строкой мы запрашиваем
+                    reader = new BufferedReader(new InputStreamReader(System.in));
+                    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                    out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+                    status.setText("Ready!");
+            } catch (IOException e) {
+                System.err.println(e);
+                status.setText(e.getMessage().toString());
+            }
+                return null;
+            }
 }
+
+class SendTask extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            TextView status = (TextView) findViewById(R.id.status);
+            try {
+                try {
+//                    clientSocket = new Socket("192.168.1.16", 4004); // этой строкой мы запрашиваем
+//                    reader = new BufferedReader(new InputStreamReader(System.in));
+//                    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+//                    out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+//                    status.setText("Ready!");
+                    //while (true) {
+
+                        //String word = reader.readLine();
+                        out.write(word + "\n");
+                        out.flush();
+                        String serverWord = in.readLine();
+                        status.setText(serverWord);
+                    //}
+                }
+                finally { // в любом случае необходимо закрыть сокет и потоки
+                    //status.setText("Клиент был закрыт...");
+//                    clientSocket.close();
+//                    in.close();
+//                    out.close();
+                }
+            } catch (IOException e) {
+                System.err.println(e);
+                status.setText(e.getMessage().toString());
+            }
+
+            return null;
+
+        }
+
+}
+
+
+}
+
+
+
+
+
+
+
+
